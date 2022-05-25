@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <script type="text/javascript" src="../jquery-3.4.1.min.js"></script> -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <title>锅打灰太狼</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <div class="app clearfix" id="app">
+        <div class="hp"></div>
+        <div class="score">0</div>
+        <div class="rules">
+            <a href="javascript:;">游戏规则</a>
+        </div>
+        <div class="start_btn">开始游戏</div>
+        <!-- 遮罩1 -->
+        <div class="rules_info">
+            <h3>游戏规则</h3>
+            <p>敲打灰太狼加10分</p>
+            <p>敲打小灰灰减10分</p>
+            <p>时间进度条走完，游戏结束</p>
+            <P><button>朕的龙椅拿来</button></P>
+        </div>
+        <!-- 遮罩2 -->
+        <div class="restart">
+            <p>GAME OVER</p>
+            <div class="restart_btn">重新开始</div>
+        </div>
+    </div>
+
+    <audio src="./audio/背景音乐处理(Background Music Treatm_爱给网_aigei_com.mp3" id="bgmaudio" loop controls="controls"
+        hidden="true"></audio>
+    <audio src="./audio/魔兽争霸-打击-2_爱给网_aigei_com.mp3" id="myaudio" controls="controls" hidden="true"></audio>
+    <audio src="./audio/噢噢失败音效_爱给网_aigei_com.mp3" id="ooaudio" controls="controls" hidden="true"></audio>
+    <audio src="./audio/配音包(40+ 线)(Voiceover Pack (40+_爱给网_aigei_com.mp3" id="sbaudio" controls="controls"
+        hidden="true"></audio>
+    <audio src="./audio/《开心消消乐》音效素材-声音.连轧比赛.3.0E6122ef_爱给网_aigei_com.mp3" id="goodaudio" controls="controls"
+        hidden="true"></audio>
+    <audio src="./audio/《开心消消乐》音效素材-声音.连轧比赛.11.15044F3_爱给网_aigei_com.mp3" id="unbuliaudio" controls="controls"
+        hidden="true"></audio>
+
+</body>
+<script>
+    //九个坑位坐标
+    const img_pos = [{
+            left: "100px",
+            top: "115px"
+        },
+        {
+            left: "20px",
+            top: "160px"
+        },
+        {
+            left: "190px",
+            top: "142px"
+        },
+        {
+            left: "105px",
+            top: "193px"
+        },
+        {
+            left: "19px",
+            top: "221px"
+        },
+        {
+            left: "202px",
+            top: "212px"
+        },
+        {
+            left: "120px",
+            top: "275px"
+        },
+        {
+            left: "30px",
+            top: "295px"
+        },
+        {
+            left: "209px",
+            top: "297px"
+        }
+    ];
+
+    // 定义图片路径数组和位置数组
+    const htl_imgs = ['./images/h0.png', './images/h1.png', './images/h2.png',
+        './images/h3.png', './images/h4.png', './images/h5.png',
+        './images/h6.png', './images/h7.png', './images/h8.png',
+        './images/h9.png'
+    ];
+    const xhh_imgs = ['./images/x0.png', './images/x1.png', './images/x2.png',
+        './images/x3.png', './images/x4.png', './images/x5.png',
+        './images/x6.png', './images/x7.png', './images/x8.png',
+        './images/x9.png'
+    ];
+    let cur_imgs;
+
+    document.onselectstart = function (event) {
+        event.preventDefault();
+    }
+
+
+    $('.rules>a').click(function () {
+
+        $('.rules_info').css('display', 'block');
+    })
+
+
+    $('.rules_info button').click(function () {
+        $('.rules_info').css('display', 'none');
+    })
+
+    //点击游戏开始按钮开始游戏
+    $('.start_btn').click(function () {
+        //让开始按钮隐藏
+        $(this).hide(300);
+        gameStart();
+    })
+
+    $('.restart_btn').click(function () {
+        // 让开始按钮隐藏
+        $(this).parent().hide(300);
+        // 调用数据重置方法
+        resetData();
+        gameStart();
+    })
+
+
+    //游戏动画
+    let pos_timer; //切换位置定时器
+    let path = null; //路径切换
+    let img = null; //创建图片标签
+
+    function pos_animate() {
+        $('#bgmaudio')[0].play();
+        pos_timer = setInterval(function () {
+            //重置(吧图片从页面中移除)
+            $('#wolf_img').remove();
+
+            //将狼的状态改为未被敲打的状态
+            wolf_status = 0;
+
+            //设置小灰灰概率为15%
+            path = Math.random() < 0.15 ? xhh_imgs : htl_imgs;
+            //创建img标签
+            img = $(`<img id="wolf_img" src="${path[0]}">`);
+
+            let number = getNumber()
+            //从数组中去取出位置对象
+            img.css({
+                position: 'absolute',
+                left: img_pos[number].left,
+                top: img_pos[number].top
+            })
+            //开启探头动画
+            headOut();
+        }, 3000);
+
+    }
+
+    let isKnocked = true; //设置开关
+    let wolf_status = 0; //0代表正常状态,1被打
+    let img_index = 0 //声明图片索引
+    let end_index = 6;
+    $('#app').on('mousedown', function (event) {
+        if (isKnocked) {
+            const wolf = document.getElementById('wolf_img');
+            if (event.target == wolf) {
+                img_index = 6;
+                end_index = 9;
+                clearInterval(timer4);
+                donghua()
+                if (wolf_status == 0) {
+                    let score = parseInt($('.score').text());
+                    //根据当前
+                    if (path == htl_imgs) {
+                        score = score + 10;
+                        $('#myaudio')[0].play();
+                    } else if (path == xhh_imgs) {
+                        score = score - 10;
+                        $('#unbuliaudio')[0].play();
+                    }
+                    $('.score').text(score);
+                    wolf_status = 1;
+                }
+
+            }
+            isKnocked = false;
+        }
+
+    })
+
+
+    //随机数方法
+    function getNumber() {
+        let number = Math.random();
+        number = number * 9;
+        return parseInt(number);
+    }
+
+    //重置方法
+    function resetData() {
+        //重置分数
+        $('.score').text(0)
+        //重置进度条
+        $('.hp').width(180);
+    }
+
+    //游戏开始方法
+    function gameStart() {
+        let timer = setInterval(function () {
+            //游戏结束需要做的事
+            if ($('.hp').css('width') <= "0px") {
+                clearInterval(timer);
+                clearInterval(pos_timer);
+                $('#wolf_img').remove();
+                console.log('游戏进度条-定时器已经关闭')
+                $('.restart').fadeIn(300);
+            }
+            $('.hp').css('width', "-=1px")
+        }, 200)
+        //动画开始执行
+        pos_animate();
+    }
+
+    function donghua() {
+        let descindex = end_index;
+        $('#app').append(img)
+    }
+
+    //获取一个 15%比列的布尔值
+    function getImg_15() {
+        return Math.random() > 0.15;
+    }
+
+    //探头动画
+    function headOut() {
+        img_index = 0;
+        end_index = 5
+        isKnocked = true; //开启敲打事件
+        donghua()
+    }
+
+    function donghua() {
+        //图片切换定时器
+        window.timer3 = setInterval(function () {
+            let descindex = end_index;
+            $('#app').append(img);
+            $('#wolf_img').attr('src', path[img_index]);
+            img_index++
+            if (img_index > 5) {
+                clearInterval(timer3)
+                window.timer4 = setInterval(function () {
+                    $('#wolf_img').attr('src', path[descindex]);
+                    descindex--;
+                    if (descindex <= 0) {
+                        clearInterval(timer4);
+                        $('#wolf_img').remove();
+                    }
+                }, 200)
+            }
+        }, 30)
+
+    }
+</script>
+
+</html>

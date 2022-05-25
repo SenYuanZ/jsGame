@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <script type="text/javascript" src="../jquery-3.4.1.min.js"></script> -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <title>锅打灰太狼</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <div class="app clearfix" id="app">
+        <div class="hp"></div>
+        <div class="score">0</div>
+        <div class="rules">
+            <a href="javascript:;">游戏规则</a>
+        </div>
+        <div class="start_btn">开始游戏</div>
+        <!-- 遮罩1 -->
+        <div class="rules_info">
+            <h3>游戏规则</h3>
+            <p>敲打灰太狼加10分</p>
+            <p>敲打小灰灰减10分</p>
+            <p>时间进度条走完，游戏结束</p>
+            <P><button>朕的龙椅拿来</button></P>
+        </div>
+        <!-- 遮罩2 -->
+        <div class="restart">
+            <p>GAME OVER</p>
+            <div class="restart_btn">重新开始</div>
+        </div>
+    </div>
+
+</body>
+<script>
+    //九个坑位坐标
+    const img_pos = [{
+            left: "100px",
+            top: "115px"
+        },
+        {
+            left: "20px",
+            top: "160px"
+        },
+        {
+            left: "190px",
+            top: "142px"
+        },
+        {
+            left: "105px",
+            top: "193px"
+        },
+        {
+            left: "19px",
+            top: "221px"
+        },
+        {
+            left: "202px",
+            top: "212px"
+        },
+        {
+            left: "120px",
+            top: "275px"
+        },
+        {
+            left: "30px",
+            top: "295px"
+        },
+        {
+            left: "209px",
+            top: "297px"
+        }
+    ];
+
+    // 定义图片路径数组和位置数组
+    const htl_imgs = ['./images/h0.png', './images/h1.png', './images/h2.png',
+        './images/h3.png', './images/h4.png', './images/h5.png',
+        './images/h6.png', './images/h7.png', './images/h8.png',
+        './images/h9.png'
+    ];
+    const xhh_imgs = ['./images/x0.png', './images/x1.png', './images/x2.png',
+        './images/x3.png', './images/x4.png', './images/x5.png',
+        './images/x6.png', './images/x7.png', './images/x8.png',
+        './images/x9.png'
+    ];
+    let cur_imgs;
+
+    document.onselectstart = function (event) {
+        event.preventDefault();
+    }
+
+
+    $('.rules>a').click(function () {
+
+        $('.rules_info').css('display', 'block');
+    })
+
+
+    $('.rules_info button').click(function () {
+        $('.rules_info').css('display', 'none');
+    })
+
+    //点击游戏开始按钮开始游戏
+    $('.start_btn').click(function () {
+        //让开始按钮隐藏
+        $(this).hide(300);
+        gameStart();
+    })
+
+    $('.restart_btn').click(function () {
+        // 让开始按钮隐藏
+        $(this).parent().hide(300);
+        // 调用数据重置方法
+        resetData();
+        gameStart();
+    })
+
+
+    //游戏动画
+    let pos_timer;
+
+    function pos_animate() {
+        pos_timer = setInterval(function () {
+            //重置(吧图片从页面中移除)
+            $('#wolf_img').remove();
+
+            //将狼的状态改为未被敲打的状态
+            wolf_status = 0;
+
+            //根据随机布尔值，决定使用哪一种图片
+            if (getImg_15()) {
+                cur_imgs = htl_imgs;
+            } else {
+                cur_imgs = xhh_imgs;
+            }
+            let img_path = cur_imgs[5];
+            const imgs = $(`<img id="wolf_img" src="${img_path}">`);
+            imgs.css('position', 'absolute');
+            let number = getNumber()
+            //从数组中去取出位置对象
+            imgs.css({
+                left: img_pos[number].left,
+                top: img_pos[number].top
+            })
+            $('#app').append(imgs);
+
+        }, 1000);
+
+    }
+
+    let wolf_status = 0; //0代表正常状态,1被打
+
+    $('#app').on('click', function (event) {
+        const wolf = document.getElementById('wolf_img');
+        if (event.target == wolf) {
+            if (wolf_status == 0) {
+                let score = parseInt($('.score').text());
+                //根据当前
+                if (cur_imgs == htl_imgs) {
+                    score = score + 10;
+                } else if (cur_imgs == xhh_imgs) {
+                    score = score - 10;
+                }
+                $('.score').text(score);
+                wolf_status = 1;
+            }
+
+        }
+    })
+
+
+    //随机数方法
+    function getNumber() {
+        let number = Math.random();
+        number = number * 9;
+        return parseInt(number);
+    }
+
+    //重置方法
+    function resetData() {
+        //重置分数
+        $('.score').text(0)
+        //重置进度条
+        $('.hp').width(180);
+    }
+
+    //游戏开始方法
+    function gameStart() {
+        let timer = setInterval(function () {
+            //游戏结束需要做的事
+            if ($('.hp').css('width') <= "0px") {
+                clearInterval(timer);
+                clearInterval(pos_timer);
+                $('#wolf_img').remove();
+                console.log('游戏进度条-定时器已经关闭')
+                $('.restart').fadeIn(300);
+            }
+            $('.hp').css('width', "-=1px")
+        }, 50)
+        //动画开始执行
+        pos_animate();
+    }
+
+    //获取一个 15%比列的布尔值
+    function getImg_15() {
+        return Math.random() > 0.15;
+    }
+</script>
+
+</html>
